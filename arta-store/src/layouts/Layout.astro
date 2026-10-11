@@ -1,0 +1,24 @@
+---
+import '../styles/global.css';
+import { Header } from '../components/StoreUI';
+import { navigation, settings } from '../lib/catalog';
+let nodes:any[]=Astro.props.nodes||[];let config:any=Astro.props.config||{};
+if(!Astro.props.nodes){try{nodes=await navigation()}catch{}}
+if(!Astro.props.config){try{config=await settings()}catch{}}
+const pageNames:Record<string,string>={'/':'דף הבית','/shop':'הקטלוג','/about':'על ארטא','/account':'החשבון שלי','/cart':'סל ההדגמה','/information':'מידע ושירות','/thank-you':'תודה שביקרתם'};
+const pageTitle=(config.pageTitles?.[Astro.url.pathname]||pageNames[Astro.url.pathname]||'')+' | ארטא — הבית של היצירה';
+---
+<!doctype html><html lang="he" dir="rtl"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><meta name="arta-page-title" content={pageTitle}/><meta name="theme-color" content="#34452b"/><meta name="robots" content="noindex,nofollow"/><link rel="icon" type="image/svg+xml" href="/favicon.svg"/><slot name="seo-tags"/></head><body><a class="skip-link" href="#main">דילוג לתוכן</a><Header nodes={nodes} notice={config.notice} client:load/><main id="main"><slot/></main><footer class="site-footer"><div class="footer-top"><div><a class="wordmark" href="/">ארטא<span>הבית של היצירה</span></a><p>חומרים טובים. רעיונות חדשים. מקום לכל מי שאוהבים ליצור.</p></div><div><h3>לגלות את ארטא</h3><a href="/shop">כל המוצרים</a><a href="/about">על ארטא</a><a href="/account">החשבון שלי</a></div><div><h3>מידע שימושי</h3><a href="/information">משלוחים ואיסוף עצמי</a><a href="/information#returns">החזרות ושירות</a><a href="/information#demo">על אתר ההדגמה</a></div></div><div class="footer-bottom"><span>ארטא · חומרי אמנות ויצירה</span><span>אתר הדגמה · המחירים והמלאי להמחשה</span></div></footer></body></html>
+
+<script>
+// Wix hosting adds main-page tags after item tags. Keep one title in the browser,
+// retaining the live product/category title and the Hebrew CMS main-page title.
+function normalizePageTags(){
+ const itemTitle=document.querySelector<HTMLTitleElement>('title[wix-seo-tags]');
+ if(itemTitle){document.querySelectorAll('[wix-seo-tag]').forEach(node=>node.remove());}
+ else {const title=document.querySelector<HTMLMetaElement>('meta[name="arta-page-title"]')?.content;if(title){document.title=title;document.querySelectorAll<HTMLMetaElement>('meta[property="og:title"],meta[name="twitter:title"]').forEach(node=>node.content=title)}}
+ document.querySelectorAll('title').forEach((node,index)=>{if(index>0)node.remove()});
+ document.querySelectorAll<HTMLMetaElement>('meta[name="robots"]').forEach(node=>node.content='noindex,nofollow');
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',normalizePageTags,{once:true});else normalizePageTags();
+</script>

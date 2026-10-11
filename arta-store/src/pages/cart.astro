@@ -1,0 +1,5 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Cart from '../components/WixCart';
+---
+<Layout><div class="page-shell"><div class="breadcrumbs"><a href="/">דף הבית</a><span>›</span><span>הסל שלי</span></div><h1 class="page-title">הסל שלי</h1><p class="page-intro">החומרים שבחרתם ליצירה הבאה</p><Cart client:only="react"/></div></Layout>

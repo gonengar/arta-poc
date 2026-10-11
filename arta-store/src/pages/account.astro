@@ -1,0 +1,11 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { ProductImage } from '../components/StoreUI';
+import { members } from '@wix/members';
+import { items } from '@wix/data';
+let member:any=null,saved:any[]=[];
+try{member=(await members.getCurrentMember({fieldsets:['FULL']})).member}catch{}
+if(!member)return Astro.redirect('/api/auth/login?returnToUrl=/account');
+try{saved=(await items.query('ArtaWishlist').limit(100).find()).items}catch{}
+---
+<Layout><div class="page-shell"><h1 class="page-title">המקום שלכם ליצור</h1><p class="page-intro">שלום, {member.contact?.firstName||member.profile?.nickname||member.loginEmail}</p><div class="account-grid"><aside class="account-panel"><h2>החשבון שלי</h2><p dir="auto">{member.loginEmail}</p><a href="/cart" class="button secondary">לסל הקניות</a><p>המוצרים השמורים שלכם מחכים כאן גם בביקור הבא.</p><p>אפשר להוסיף מוצרים לסל ולהמשיך לקופה. המחירים והזמינות להדגמה.</p><form method="POST" action="/api/auth/logout"><button>התנתקות</button></form></aside><section id="saved"><h2>המוצרים השמורים שלי</h2>{saved.length?<div class="account-saved">{saved.map(p=><article><a href={'/product/'+p.slug}><ProductImage src={p.image} name={p.name} client:load/><h3 dir="auto">{p.name}</h3></a></article>)}</div>:<div class="empty-state"><p>עוד לא שמרתם מוצרים. לחיצה על הלב לצד מוצר תשמור אותו כאן.</p><a class="button" href="/shop">לגלות את הקטלוג</a></div>}</section></div></div></Layout>

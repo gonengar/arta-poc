@@ -1,0 +1,17 @@
+{
+  "siteId": "a0a5befd-2702-4f70-b267-edd2c50e5b77",
+  "sourceSkuCount": 6265,
+  "nativeVariantCount": 6265,
+  "nativeUniqueSkuCount": 6265,
+  "missingSkus": [],
+  "inStockVariants": 0,
+  "productCount": 4613,
+  "categoryCount": 253,
+  "images": {
+    "attached": 2137
+  },
+  "checkedAt": "2026-09-09T18:06:05.783Z",
+  "verificationNote": "Initial cursor scan plus targeted reads for omitted records.",
+  "liveUrl": "https://arta-poc-gonenj-0806.wix-site-host.com",
+  "releaseVerifiedAt": "2026-09-09T18:28:06.681Z"
+}

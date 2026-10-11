@@ -1,0 +1,21 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { ProductCard,ProductImage,ProductPicker,WishlistButton,money } from '../../components/StoreUI';
+import { productPage,navigation,settings } from '../../lib/catalog';
+import { WIX_APPS } from '@wix/essentials';
+import { SEO } from '@wix/seo/components';
+import { loadSEOTagsServiceConfig } from '@wix/seo/services';
+import { seoTags } from '@wix/seo';
+export const wixMetadata={appDefId:WIX_APPS.checkoutAndOrders.id,pageIdentifier:WIX_APPS.checkoutAndOrders.productPageMetadata.pageIdentifier,identifiers:{slug:WIX_APPS.checkoutAndOrders.productPageMetadata.identifiers.handle}};
+
+// Request data must remain inside the Astro component, after metadata exports.
+let slug = Astro.params.slug || '';
+try { slug = decodeURIComponent(slug); } catch {}
+
+let product:any=null,nodes:any[]=[],config:any={},seo:any,error=false;
+try{[product,nodes,config]=await Promise.all([productPage(slug),navigation(),settings()])}catch{error=true}
+if(!product)Astro.response.status=error?503:404;
+if(product)try{seo=await loadSEOTagsServiceConfig({pageUrl:Astro.request.headers.get('x-wix-forwarded-url')||Astro.url.href,itemType:seoTags.ItemType.STORES_PRODUCT,itemData:{slug}})}catch{}
+const category=product?nodes.find(n=>n.depth===0&&product.meta.categoryKeys?.includes(n.key)&&n.name!=='מותגים'):null;
+---
+<Layout nodes={nodes} config={config}>{seo&&<SEO.Tags seoTagsServiceConfig={seo} slot="seo-tags"/>}<div class="page-shell">{product?<><div class="breadcrumbs"><a href="/">דף הבית</a><span>›</span><a href="/shop">הקטלוג</a>{category&&<><span>›</span><a href={'/category/'+category.storeSlug}>{category.name}</a></>}</div><section class="product-top"><div class="product-copy"><span class="brand-name" dir="auto">{product.brand}</span><h1 dir="auto">{product.name}</h1><p class="product-description" dir="auto">{product.description}</p><div class="detail-price"><strong>{product.variants.length>1?'החל מ־ ':''}{money(product.price)}</strong><span>מחיר להדגמה בלבד</span></div><div class="detail-actions"><a class="button" href="#selection">{product.variants.length>1?'לבחירת גוון ומידה':'לבחירת הפריט'} <span aria-hidden="true">↓</span></a><WishlistButton product={product} client:load/></div><p class="product-notice">המחירים והזמינות באתר הם להדגמה. אפשר להוסיף לסל ולהמשיך לקופה.</p></div><div class="product-main-image"><ProductImage src={product.image} name={product.name} client:load/></div></section><div id="selection"><ProductPicker product={product} checkoutEnabled={config.checkoutEnabled===true} client:load/></div>{product.related.length>0&&<section class="related-section"><div class="section-heading"><div><span class="eyebrow">משלימים את היצירה</span><h2>חומרים שעובדים טוב יחד</h2></div></div><div class="product-grid">{product.related.map((p:any)=><ProductCard product={p} client:load/>)}</div></section>}</>:<div class="empty-state"><h1>{error?'המוצר לא נטען כרגע':'המוצר לא נמצא'}</h1><p>אפשר לחזור לקטלוג ולמצוא חומרים נוספים.</p><a class="button" href="/shop">לקטלוג</a></div>}</div></Layout>

@@ -1,0 +1,14 @@
+{
+  "checkedAt": "2026-09-09T18:50:18.517Z",
+  "manualTokenGeneration": false,
+  "authorizationHeader": false,
+  "checks": [
+    "framework-issued visitor cookie on HTML render",
+    "cart persists across page rendering with cookie-only requests",
+    "quantity update",
+    "hosted checkout redirect",
+    "a second visitor has an independent empty cart",
+    "item removal"
+  ],
+  "paymentSubmitted": false
+}

@@ -1,0 +1,28 @@
+{
+  "dataItem": {
+    "id": "commerce",
+    "dataCollectionId": "ArtaSettings",
+    "data": {
+      "name": "commerce",
+      "_id": "commerce",
+      "_owner": "f38834ae-0ac1-41c3-a9fd-70b506973d79",
+      "_createdDate": {
+        "$date": "2026-09-09T17:58:00.900Z"
+      },
+      "_updatedDate": {
+        "$date": "2026-09-09T17:58:00.900Z"
+      },
+      "value": {
+        "headline": "כל יצירה מתחילה בחומר הנכון",
+        "subtitle": "צבעים, ניירות וכלי אמנות — מהסקיצה הראשונה ועד העבודה הבאה.",
+        "productCount": 4613,
+        "pricingMode": "demo",
+        "sourceSkuCount": 6265,
+        "notice": "אתר הדגמה · המחירים להמחשה בלבד · לא ניתן לבצע רכישה",
+        "currency": "ILS",
+        "checkoutEnabled": false,
+        "priorityConnected": false
+      }
+    }
+  }
+}

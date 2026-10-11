@@ -1,0 +1,16 @@
+# Spec / source documents (kept local only)
+/*.docx
+/*.xlsx
+/*.jpg
+
+# Secrets
+.env
+.env.*
+
+# Build & deps
+node_modules/
+dist/
+
+# Local tooling state
+.claude/
+.DS_Store

@@ -1,0 +1,26 @@
+{
+  "productUrl": "https://arta-poc-gonenj-0806.wix-site-host.com/product/arta-ed208947a123c77e",
+  "cartAdded": 200,
+  "checkoutRedirect": 200,
+  "checkoutPage": 200,
+  "checkoutLanguage": {
+    "userLanguage": "he",
+    "userLanguageResolutionMethod": "QueryParam",
+    "siteLanguage": "en",
+    "isMultilingualEnabled": false,
+    "directionByLanguage": "rtl"
+  },
+  "cartRemoval": 200,
+  "cartEmpty": true,
+  "quantityUpdateVerified": true,
+  "persistenceVerified": true,
+  "productionBuild": true,
+  "requestScopeRegression": true,
+  "paymentSubmitted": false,
+  "checkedAt": "2026-09-09T18:43:11.517Z",
+  "productPage": 200,
+  "multiVariantProductPage": 200,
+  "categoryPage": 200,
+  "demoInventoryVariants": 6265,
+  "inventoryUpdateFailures": 0
+}

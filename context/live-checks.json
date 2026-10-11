@@ -1,0 +1,31 @@
+[
+  {
+    "path": "/category/%D7%A6%D7%91%D7%A2%D7%99%D7%9D-%D7%9C%D7%90%D7%95%D7%9E%D7%A0%D7%95%D7%AA",
+    "status": "200",
+    "hebrew": true,
+    "bodyLength": 261221,
+    "categoryTiles": 10,
+    "productCards": 0
+  },
+  {
+    "path": "/api/catalog?min=40&max=160&sort=price-up",
+    "status": "200",
+    "bodyLength": 20092,
+    "products": 24
+  },
+  {
+    "path": "/shop",
+    "status": "200",
+    "bodyLength": 326991,
+    "hebrew": true,
+    "titleScript": true
+  },
+  {
+    "path": "/category/%D7%A6%D7%91%D7%A2%D7%99%D7%9D-%D7%9C%D7%90%D7%95%D7%9E%D7%A0%D7%95%D7%AA?view=products",
+    "status": "200",
+    "hebrew": true,
+    "bodyLength": 334429,
+    "categoryTiles": 0,
+    "productCards": 24
+  }
+]
