@@ -46,7 +46,7 @@ if(mode==='all'||mode==='products'){
   while(pending.length&&batch.length<50&&variants+pending[0].variants.length<=900){const g=pending.shift();batch.push(g);variants+=g.variants.length}
   const response=api('stores/v3/bulk/products-with-inventory/create',{products:batch.map(product),returnEntity:true});
   let failures=[];
-  for(const result of response.productResults?.results||[]){const g=batch[result.itemMetadata.originalIndex];if(result.itemMetadata.success){state.products[g.key]={id:result.item.id,slug:result.item.slug,revision:result.item.revision};}else failures.push({key:g.key,error:result});}
+  for(const result of response.productResults?.results||[]){const g=batch[result.itemMetadata.originalIndex];if(result.itemMetadata.success){state.products[g.key]={id:result.item.id,slug:result.item.slug,revision:result.item.revision,...(Object.keys(state.assignments).length?{assigned:false}:{})};}else failures.push({key:g.key,error:result});}
   save();console.log('Products',Object.keys(state.products).length,'/',catalog.products.length,'failures',failures.length);
   if(failures.length){fs.writeFileSync(root+'context/import-errors.json',JSON.stringify(failures,null,2));throw new Error('Product failures; see context/import-errors.json')}
   if(!(response.productResults?.results?.length))throw new Error('Missing product results');
@@ -64,6 +64,11 @@ if(mode==='all'||mode==='categories'){
   const products=catalog.products.filter(g=>g.categoryKeys.includes(n.key)&&state.products[g.key]);
   for(let i=0;i<products.length;i+=1000){const result=api('categories/v1/bulk/categories/'+state.categories[n.key].id+'/add-items',{items:products.slice(i,i+1000).map(g=>({catalogItemId:state.products[g.key].id,appId:STORE})),treeReference});if(result.bulkActionMetadata?.totalFailures)throw new Error(JSON.stringify(result));}
   state.assignments[n.key]=products.length;save();
+ }
+ // Products created after their categories were filled are added individually.
+ for(const g of catalog.products.filter(g=>state.products[g.key]?.assigned===false)){
+  for(const k of g.categoryKeys){const result=api('categories/v1/bulk/categories/'+state.categories[k].id+'/add-items',{items:[{catalogItemId:state.products[g.key].id,appId:STORE}],treeReference});if(result.bulkActionMetadata?.totalFailures&&!JSON.stringify(result).includes('ALREADY_EXISTS'))throw new Error(JSON.stringify(result));}
+  state.products[g.key].assigned=true;save();console.log('Assigned',g.name,'to',g.categoryKeys.length,'categories');
  }
  console.log('Category assignments complete');
 }
@@ -91,6 +96,26 @@ if(mode==='all'||mode==='images'){
  for(let i=0;i<pending.length;i+=50){const batch=pending.slice(i,i+50);const fresh=api('stores/v3/products/query',{query:{filter:{id:{$in:batch.map(g=>state.products[g.key].id)}},cursorPaging:{limit:100}}});const revisions=Object.fromEntries((fresh.products||[]).map(p=>[p.id,p.revision]));const r=api('stores/v3/bulk/products/update',{products:batch.map(g=>({product:{id:state.products[g.key].id,revision:revisions[state.products[g.key].id]||state.products[g.key].revision,media:{itemsInfo:{items:[{url:g.image,altText:g.name.slice(0,500)}]}}}}))});
   for(const result of r.results||[]){const g=batch[result.itemMetadata.originalIndex];state.images[g.key]=result.itemMetadata.success?'attached':'failed';}save();console.log('Images attempted',Object.keys(state.images).length,'/',pending.length);
   Atomics.wait(new Int32Array(new SharedArrayBuffer(4)),0,0,7000);
+ }
+}
+// Remove products whose catalog family was regrouped (e.g. after prepare_catalog.py changes).
+// Dry run unless --apply; run 'products', 'categories', 'cms' and 'images' first so replacements exist.
+if(mode==='reconcile'){
+ const keys=new Set(catalog.products.map(g=>g.key));
+ const stale=Object.keys(state.products).filter(k=>!keys.has(k));
+ const missing=catalog.products.filter(g=>!state.products[g.key]||state.products[g.key].assigned===false||!(state.cms.ArtaProductDetails||[]).includes(g.key));
+ console.log('Stale products',stale.length,'replacements not fully imported',missing.length);
+ if(missing.length)throw new Error('Import replacements first: '+missing.map(g=>g.key).join(','));
+ if(process.argv[3]==='--apply'){
+  for(let i=0;i<stale.length;i+=100){
+   const batch=stale.slice(i,i+100);
+   api('stores/v3/bulk/products/delete',{productIds:batch.map(k=>state.products[k].id)});
+   const r=api('wix-data/v2/bulk/items/remove',{dataCollectionId:'ArtaProductDetails',dataItemIds:batch});
+   if(r.bulkActionMetadata?.totalFailures)throw new Error(JSON.stringify(r));
+   for(const k of batch){delete state.products[k];delete state.images[k];}
+   state.cms.ArtaProductDetails=(state.cms.ArtaProductDetails||[]).filter(k=>!batch.includes(k));save();
+   console.log('Removed',Math.min(i+100,stale.length),'/',stale.length);
+  }
  }
 }
 console.log('Completed',mode);

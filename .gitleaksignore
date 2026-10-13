@@ -1,0 +1,2 @@
+# False positive: product family hash (sha1 prefix of the family name), not a secret.
+context/catalog.json:generic-api-key:7862
