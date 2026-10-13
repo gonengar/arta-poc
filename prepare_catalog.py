@@ -2,10 +2,12 @@ from pathlib import Path
 from zipfile import ZipFile
 from html import unescape
 import xml.etree.ElementTree as ET
-import openpyxl, re, json, hashlib, collections
+import openpyxl, re, json, hashlib, collections, sys
 
 ROOT=Path(__file__).parent
 OUT=ROOT/'context'; OUT.mkdir(exist_ok=True)
+# Optional output path keeps previews separate from the imported catalog.
+OUT_FILE=Path(sys.argv[1]) if len(sys.argv)>1 else OUT/'catalog.json'
 def clean(s): return re.sub(r'\s+', ' ', unescape(str(s or '')).replace('\xa0',' ')).strip()
 def key(s): return hashlib.sha1(s.encode()).hexdigest()[:16]
 ns={'w':'http://schemas.openxmlformats.org/wordprocessingml/2006/main'}
@@ -35,6 +37,31 @@ def classify(name,url):
  else: kind='accessory';root='אביזרים לאומן ולסטודיו'
  return kind,root,technique
 
+# W&N oil tubes are listed in several naming styles, e.g. "Winton … שם גוון: X מס גוון: W0337",
+# "ווינטון … X מספר גוון:W0337", "ארטיסט … X מס. גוון:W0545 סריה 2", "ארטיסט … גוון : X".
+# Parse them into one family per range so each colour can offer every tube size.
+WN_OIL={'Winsor & Newton צבעי שמן Winton':r'winton|ווינטון',"Winsor & Newton צבעי שמן Artists'":r'artists?|ארטיסט'}
+WN_CODE=re.compile(r'(?:מס(?:פר|\x27|\.)?\s*)?גוון\s*:\s*\x27?\s*W?\s*(\d+)',re.I)
+def wn_oil(name):
+ # Whole word only: "ארטיסט" (Artist) contains the letters of "סט" (set).
+ if re.search(r'\bסט\b',name): return None
+ for family,alias in WN_OIL.items():
+  m=re.search(r'winsor\s*&\s*newton\s*צבע שמן\s*-?\s*(?:'+alias+r')\s*(?:סריה\s*\d+\s*)?(\d+)\s*מ"ל\s*(.*)$',name,re.I)
+  if m: break
+ else: return None
+ rest=re.sub(r'^\s*(?:שם\s*)?גוון\s*:','',m.group(2))
+ code=WN_CODE.search(rest)
+ shade=rest[:code.start()] if code else rest
+ code=code.group(1) if code else ''
+ shade=re.sub(r'\(\d+\)|סריה\s*\d+|\bמספר\b\s*$','',shade).strip(' -,:')
+ # Some rows carry the bare colour number before or after the name ("250 Quinacridone…", "…Verdigris 405").
+ bare=re.match(r'^(\d{3})\s+(.+)$',shade) or re.match(r'^(.+?)\s+(\d{3})$',shade)
+ if bare and not code:
+  number,shade=(bare.group(1),bare.group(2)) if bare.group(1).isdigit() else (bare.group(2),bare.group(1))
+  code=number
+ return {'family':family,'size':m.group(1)+' מ"ל','shade':clean(shade),'code':code.lstrip('0')}
+def shade_key(s): return re.sub(r'[^a-z]','',s.lower())
+
 rows=list(openpyxl.load_workbook(next(ROOT.glob('*.xlsx')),read_only=True,data_only=True).active.values)[1:]
 groups={}; invalid_images=0
 for rownum,row in enumerate(rows,2):
@@ -58,6 +85,8 @@ for rownum,row in enumerate(rows,2):
   if brand=='Winsor & Newton' and 'winton' in name.lower(): base='Winsor & Newton צבעי שמן Winton'
  if not shade and base!=name:
   tail=re.split(r'מ"ל',name)[-1];shade=clean(re.split(r'מס(?:פר|\.?|\x27)?\s*גוון\s*:',tail)[0]).strip(' -,:') or name
+ w=wn_oil(name)
+ if w: base,shade,size=w['family'],w['shade'],w['size'];code='W'+w['code'].zfill(4) if w['code'] else ''
  groupkey=key(base if shade or base!=name else sku)
  g=groups.setdefault(groupkey,{'key':groupkey,'name':base,'brand':brand,'kind':kind,'root':root,'technique':technique,'image':image,'description':'','variants':[],'categoryKeys':[],'mappingStatus':'inferred-from-source-name'})
  desc=clean(re.sub('<[^>]+>',' ',str(row[2] or '')))
@@ -67,6 +96,22 @@ for rownum,row in enumerate(rows,2):
  g['series']=series or g.get('series','')
  g['level']='artist' if re.search(r"artist|professional|מקצועי",base,re.I) else 'student' if re.search(r'winton|studio|basic|סטודנט',base,re.I) else ''
  g['variants'].append({'sku':sku,'name':name,'shade':shade,'shadeCode':code,'size':size,'image':image,'sourceUrl':url,'sourceRow':rownum,'demoPrice':float(29+(int(sku)%14)*10)})
+
+# Pair the tube sizes of one colour: same colour code first, otherwise same spelled name.
+# The picker groups sizes by identical shade text, so each colour gets one display name.
+for family in WN_OIL:
+ wg=groups.get(key(family))
+ if not wg: continue
+ by_name={shade_key(v['shade']):v['shadeCode'] for v in wg['variants'] if v['shadeCode']}
+ colour=lambda v:v['shadeCode'] or by_name.get(shade_key(v['shade'])) or shade_key(v['shade'])
+ names={}
+ # Prefer the fullest spelling ("Permanent Crimson Lake" over "Perm Crimson lake").
+ for v in sorted(wg['variants'],key=lambda v:-len(v['shade'])):names.setdefault(colour(v),v['shade'])
+ for v in wg['variants']:
+  c=colour(v);v['shade']=names[c]
+  if not v['shadeCode'] and c.startswith('W'):v['shadeCode']=c
+ wg['variants'].sort(key=lambda v:(int(v['shadeCode'][1:]) if v['shadeCode'] else 99999,v['shade'],float(v['size'].split()[0])))
+ wg['mappingStatus']='inferred-from-source-name; sizes paired by colour code'
 
 for g in groups.values():
  # Shade-code labels contain the word "number"; they are not scissors/accessories.
@@ -107,5 +152,5 @@ for g in groups.values():
   for i in range(0,len(g['variants']),100):
    products.append({**g,'key':key(g['key']+':'+str(i//100)), 'variants':g['variants'][i:i+100]})
 catalog={'sourceFile':next(ROOT.glob('*.xlsx')).name,'sourceRows':len(rows),'missingImageCount':invalid_images,'categories':nodes,'products':products,'pricingMode':'demo-disabled','checkoutEnabled':False}
-(OUT/'catalog.json').write_text(json.dumps(catalog,ensure_ascii=False,indent=2))
+OUT_FILE.write_text(json.dumps(catalog,ensure_ascii=False,indent=2))
 print(json.dumps({'skus':len(rows),'productFamilies':len(groups),'categories':len(nodes),'missingImages':invalid_images,'maxVariants':max(len(g['variants']) for g in groups.values())}))
