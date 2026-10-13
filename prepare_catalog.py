@@ -95,7 +95,7 @@ for rownum,row in enumerate(rows,2):
  series=next((x for x in ['Winton','Artist','Artisan','Polychromos','Artistico','Heavy Body','Studio','Basic','Promarker'] if x.lower() in name.lower()),'')
  g['series']=series or g.get('series','')
  g['level']='artist' if re.search(r"artist|professional|מקצועי",base,re.I) else 'student' if re.search(r'winton|studio|basic|סטודנט',base,re.I) else ''
- g['variants'].append({'sku':sku,'name':name,'shade':shade,'shadeCode':code,'size':size,'image':image,'sourceUrl':url,'sourceRow':rownum,'demoPrice':float(29+(int(sku)%14)*10)})
+ g['variants'].append({'sku':sku,'name':name,'shade':shade,'shadeCode':code,'size':size,'image':image,'sourceUrl':url,'sourceRow':rownum,'demoPrice':float(29+((int(sku) if sku.isdigit() else sum(map(ord,sku)))%14)*10)})
 
 # Pair the tube sizes of one colour: same colour code first, otherwise same spelled name.
 # The picker groups sizes by identical shade text, so each colour gets one display name.

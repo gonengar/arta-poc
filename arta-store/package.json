@@ -13,7 +13,7 @@
     "env": "wix env",
     "skills": "wix skills",
     "test:request-scope": "node scripts/check-request-scope.mjs",
-    "test:shop-client": "node --test scripts/shop-client.test.mjs"
+    "test:shop-client": "node --experimental-strip-types --test scripts/shop-client.test.mjs"
   },
   "dependencies": {
     "@wix/astro": "^2.39.0",

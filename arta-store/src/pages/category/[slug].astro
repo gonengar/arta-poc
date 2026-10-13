@@ -1,7 +1,7 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import { CatalogGrid, ProductImage } from '../../components/StoreUI';
-import { navigation,listProducts } from '../../lib/catalog';
+import { navigation,listProducts,brandOptions } from '../../lib/catalog';
 import { WIX_APPS } from '@wix/essentials';
 import { SEO } from '@wix/seo/components';
 import { loadSEOTagsServiceConfig } from '@wix/seo/services';
@@ -17,6 +17,6 @@ const children=nodes.filter(n=>n.parentKey===node.key);const showProducts=!child
 if(showProducts)try{const p=new URLSearchParams(Astro.url.searchParams);p.set('category',node.storeCategoryId);initial=await listProducts(p)}catch{initial.error='לא הצלחנו לטעון את המוצרים. אפשר לנסות שוב.'}
 try{seo=await loadSEOTagsServiceConfig({pageUrl:Astro.request.headers.get('x-wix-forwarded-url')||Astro.url.href,itemType:seoTags.ItemType.STORES_CATEGORY,itemData:{slug}})}catch{}
 initial.filters=Object.fromEntries(Astro.url.searchParams);
-const brands=nodes.filter(n=>n.depth===1&&n.path?.[0]==='מותגים').map(n=>n.name.replace('Faber Casstel','Faber Castell').replace('Hahnemuehle','Hahnemuhle').replace('Montana-Cans','Montana'));
+const brands=await brandOptions();
 ---
 <Layout nodes={nodes}>{seo&&<SEO.Tags seoTagsServiceConfig={seo} slot="seo-tags"/>}<div class="page-shell category-page"><div class="breadcrumbs"><a href="/">דף הבית</a>{node.path?.map((label:string,i:number)=>{const parent=nodes.find(n=>JSON.stringify(n.path)===JSON.stringify(node.path.slice(0,i+1)));return <><span>›</span><a href={'/category/'+(parent?.storeSlug||node.storeSlug)}>{label}</a></>})}</div><h1 class="page-title">{node.name}</h1><p class="page-intro">{children.length?'צעד נוסף בדרך לחומר המתאים. בחרו קטגוריה להמשך.':'החומרים והכלים שעושים מקום לרעיונות שלכם.'}</p>{!showProducts&&<><div class="category-grid">{children.map(n=><a class="category-tile" href={'/category/'+n.storeSlug}><ProductImage src={n.image} name={n.name} client:load/><h3>{n.name}<span aria-hidden="true">↖</span></h3><p>{n.productCount?'לגלות את המוצרים':'המבחר מתעדכן'}</p></a>)}</div><a class="button secondary load-more" href={'?view=products'}>כל המוצרים בקטגוריה</a></>}{showProducts&&<CatalogGrid initial={initial} categoryId={node.storeCategoryId} brandOptions={brands} client:load/>}</div></Layout>

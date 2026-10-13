@@ -1,11 +1,11 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import { CatalogGrid } from '../components/StoreUI';
-import { navigation,listProducts } from '../lib/catalog';
+import { navigation,listProducts,brandOptions } from '../lib/catalog';
 let nodes:any[]=[],initial:any={products:[]};
 try{nodes=await navigation();initial=await listProducts(Astro.url.searchParams)}catch{initial.error='לא הצלחנו לטעון את המוצרים. אפשר לנסות שוב.'}
 initial.filters=Object.fromEntries(Astro.url.searchParams);
-const brands=nodes.filter(n=>n.depth===1&&n.path?.[0]==='מותגים').map(n=>n.name.replace('Faber Casstel','Faber Castell').replace('Hahnemuehle','Hahnemuhle').replace('Montana-Cans','Montana'));
+const brands=await brandOptions();
 const query=Astro.url.searchParams.get('q');
 ---
 <Layout nodes={nodes}><div class="page-shell"><div class="breadcrumbs"><a href="/">דף הבית</a><span>›</span><span>הקטלוג</span></div><h1 class="page-title">{query?'תוצאות החיפוש':'כל החומרים ליצירה שלכם'}</h1><p class="page-intro">{query?'התוצאות עבור ״'+query+'״':'למצוא את הצבע, הנייר או הכלי שמתאימים לרעיון הבא.'}</p>{!query&&<div class="category-chips">{nodes.filter(n=>!n.parentKey).map(n=><a href={'/category/'+n.storeSlug}>{n.name}</a>)}</div>}<CatalogGrid initial={initial} brandOptions={brands} client:load/></div></Layout>

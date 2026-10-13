@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { currentCartV2, cartV2 } from '@wix/ecom';
 import { redirects } from '@wix/redirects';
 import { imageUrl, metadata, settings } from '../../lib/catalog';
+import { isCrossOrigin, publicOrigin } from '../../lib/http';
 const STORE='215238eb-22a5-4c36-9e7b-e7c08025e04e';
 const json=(body:unknown,status=200)=>Response.json(body,{status,headers:{'Cache-Control':'private, no-store'}});
 const validQuantity=(q:unknown)=>Number.isInteger(q)&&Number(q)>=1&&Number(q)<=99;
@@ -16,8 +17,7 @@ async function view(cart:any){
 export const GET:APIRoute=async()=>{try{return json(await view(await readCart()))}catch(e){console.error('Arta cart read failed',e instanceof Error?e.message:'unknown');return json({error:'לא הצלחנו לטעון את הסל. אפשר לנסות שוב.'},503)}};
 export const POST:APIRoute=async({request})=>{
  try{
-  const origin=request.headers.get('Origin');const host=request.headers.get('Host')||new URL(request.url).host;
-  if(origin&&new URL(origin).host!==host)return json({error:'הבקשה אינה מורשית.'},403);
+  if(isCrossOrigin(request))return json({error:'הבקשה אינה מורשית.'},403);
   if((await settings()).checkoutEnabled!==true)return json({error:'הקופה אינה זמינה כרגע.'},409);
   let body:any;try{body=await request.json()}catch{return json({error:'בקשה לא תקינה.'},400)}
   if(body.action==='add'){
@@ -34,7 +34,7 @@ export const POST:APIRoute=async({request})=>{
    const result=await cartV2.updateLineItems(cart._id,{lineItems:[{lineItemId:body.lineItemId,quantity:{newQuantity:body.quantity}}]});return json(await view(result.cart));
   }
   if(body.action==='checkout'){
-   const publishedOrigin='https://'+host;
+   const publishedOrigin=publicOrigin(request);
    const result=await redirects.createRedirectSession({ecomCheckout:{checkoutId:cart._id},preferences:{additionalQueryParameters:{lang:'he'}},callbacks:{postFlowUrl:publishedOrigin+'/cart'}});
    const url=result.redirectSession?.fullUrl;if(!url)throw new Error('Missing hosted checkout URL');
    return json({url});

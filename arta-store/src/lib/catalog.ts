@@ -26,6 +26,10 @@ export async function navigation(){
  for(const c of cats)if(c.name&&!nodes.some(n=>n.storeCategoryId===c._id)&&c.name!=='All Products')result.push({key:c._id,name:c.name,parentKey:'',depth:0,storeCategoryId:c._id,storeSlug:c.slug,path:[c.name],image:''});
  return result;
 }
+// Brand filter options come from the products' own brand values, so every option has matches.
+export async function brandOptions():Promise<string[]>{
+ try{const r:any=await items.distinct('ArtaProductDetails','brand');return (r.items as any[]).filter((b):b is string=>typeof b==='string'&&!!b.trim()).sort((a,b)=>a.localeCompare(b))}catch{return []}
+}
 export async function metadata(ids:string[]){
  if(!ids.length)return [];
  try{return (await items.query('ArtaProductDetails').hasSome('productId',ids).limit(1000).find()).items}catch{return []}
@@ -63,12 +67,12 @@ export async function productPage(slug:string){
  const ms=await metadata([p._id!]);const m:any=ms[0]||{};
  let siblings:any[]=[m];
  if(m.familyKey)siblings=(await items.query('ArtaProductDetails').eq('familyKey',m.familyKey).limit(20).find()).items;
- const variants:any[]=[];
- for(const s of siblings){
+ const variantPages=Promise.all(siblings.map(async(s:any)=>{
   const id=s.productId||p._id;const r:any=await readOnlyVariantsV3.queryVariants().eq('productData.productId',id).limit(100).find();
-  for(const v of r.items){const detail=s.variants?.items?.find((d:any)=>d.sku===v.sku)||{};variants.push({...detail,productId:id,variantId:v.variantId??v._id,sku:v.sku||detail.sku,image:imageUrl(detail.image)||imageUrl(s.image),price:Number(v.price?.actualPrice?.amount??v.actualPrice?.amount??detail.demoPrice??p.actualPriceRange?.minValue?.amount??0),inStock:!!v.inventoryStatus?.inStock})}
- }
- const rules=(await items.query('ArtaCrossSell').eq('technique',m.technique||'none').eq('sourceKind',m.kind||'none').find()).items;
+  return r.items.map((v:any)=>{const detail=s.variants?.items?.find((d:any)=>d.sku===v.sku)||{};return {...detail,productId:id,variantId:v.variantId??v._id,sku:v.sku||detail.sku,image:imageUrl(detail.image)||imageUrl(s.image),price:Number(v.price?.actualPrice?.amount??v.actualPrice?.amount??detail.demoPrice??p.actualPriceRange?.minValue?.amount??0),inStock:!!v.inventoryStatus?.inStock}});
+ }));
+ const [pages,rulesResult]=await Promise.all([variantPages,items.query('ArtaCrossSell').eq('technique',m.technique||'none').eq('sourceKind',m.kind||'none').find()]);
+ const variants:any[]=pages.flat();const rules=rulesResult.items;
  let related:any[]=[];
  if(rules.length){const candidates=(await items.query('ArtaProductDetails').eq('technique',m.technique).hasSome('kind',rules[0].allowedKinds||[]).ne('kind',m.kind).limit(6).find()).items; if(candidates.length){const r=await productsV3.queryProducts({fields:PRODUCT_FIELDS}).in('_id',candidates.map(x=>x.productId)).find();related=r.items.map(x=>card(x,candidates.find(y=>y.productId===x._id)))}}
  return {...card(p,m),meta:m,variants,related};
