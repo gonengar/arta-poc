@@ -28,7 +28,7 @@ export async function navigation(){
 }
 // Brand filter options come from the products' own brand values, so every option has matches.
 export async function brandOptions():Promise<string[]>{
- try{const r:any=await items.distinct('ArtaProductDetails','brand');return (r.items as any[]).filter((b):b is string=>typeof b==='string'&&!!b.trim()).sort((a,b)=>a.localeCompare(b))}catch{return []}
+ try{const r=await items.distinct('ArtaProductDetails','brand');return (r.values as any[]).filter((b):b is string=>typeof b==='string'&&!!b.trim()).sort((a,b)=>a.localeCompare(b))}catch(e){console.error('Arta brand options failed',e instanceof Error?e.message:'unknown');return []}
 }
 export async function metadata(ids:string[]){
  if(!ids.length)return [];
